@@ -1,2 +1,4 @@
 ^lab4package\.Rproj$
 ^\.Rproj\.user$
+^\.github$
+^README\.Rmd$
