@@ -1,67 +1,153 @@
-#' Ordinary Linear Regression
-#'
-#' This function calculates all the interesting parameters for the linear regression.
-#'
-#' @param formula is a `formula` object representing the model
-#' @param data is a `data.frame` object containing the dataset that is being used
-#'
-#' @return an `RC` class object containing the following items:
-#' \enumerate{
-#'  \item Regressions Coefficients
-#'  \item Fitted Values
-#'  \item Residuals
-#'  \item Degrees of Freedom
-#'  \item Residual Variance
-#'  \item Variance of the Regression Coefficients
-#'  \item t-values
-#'  \item p-values
-#' }
-#' @export
-#'
-#' @examples
+linreg <- setRefClass(
+  "linreg",
+  fields = list(
+    beta = "numeric",
+    fitted_val = "numeric",
+    residual_val = "numeric",
+    df = "numeric",
+    res_var = "numeric",
+    var_reg = "numeric",
+    t_values = "numeric",
+    p_values = "numeric",
+    call = "character"
+  ),
+  methods = list(
+    initialize = function(formula, data){
 
-linreg <- function(formula,data){
-  X <- model.matrix(formula,data)
-  dependent <- all.vars(formula)[1]
+      stopifnot(
+        is.data.frame(data),
+        inherits(formula, "formula")
+      )
 
-  n <- length(data[[dependent]])
-  p <- length(colnames(X))
+      X <- model.matrix(formula,data)
+      dependent <- all.vars(formula)[1]
 
-  beta <- solve(t(X) %*% X) %*% t(X) %*% data[[dependent]]
-  fitted_val <- X %*% beta
-  residual_val <- data[[dependent]] - fitted_val
-  df <- n-p
-  res_var <- as.vector((t(residual_val) %*% residual_val)/df)
-  var_reg <- diag(res_var * solve(t(X) %*% X))
-  t_values <- beta / sqrt(var_reg)
+      n <- length(data[[dependent]])
+      p <- length(colnames(X))
 
-  p_values <- pt(-abs(t_values),df=df)
+      beta_local <- solve(t(X) %*% X) %*% t(X) %*% data[[dependent]]
+      .self$fitted_val <- as.vector(X %*% beta_local)
+      residual_val_local <- data[[dependent]] - .self$fitted_val
+      .self$residual_val <- as.vector(residual_val_local)
+      .self$df <- n-p
+      .self$res_var <- as.vector((t(residual_val_local) %*% residual_val_local)/.self$df)
+      .self$var_reg <- diag(.self$res_var * solve(t(X) %*% X))
+      .self$t_values <- as.vector(beta_local / sqrt(.self$var_reg))
 
-  beta_vector <- as.vector(beta)
-  names(beta_vector) <- rownames(beta)
+      .self$p_values <- as.vector(pt(-abs(t_values),df = .self$df))
 
-  formula_string <- as.character(formula)
-  call <- paste(
-    "linreg(formula =",
-    formula_string[[2]],
-    "~",
-    formula_string[[3]],
-    ", data = ",
-    deparse(substitute(data)),
-    ")"
+      beta_vector <- as.vector(beta_local)
+      names(beta_vector) <- rownames(beta_local)
+      .self$beta <- beta_vector
+
+      formula_string <- as.character(formula)
+      .self$call <- paste0(
+        "linreg(formula = ",
+        formula_string[[2]],
+        " ~ ",
+        formula_string[[3]],
+        ", data = ",
+        deparse(substitute(data)),
+        ")"
+      )
+    },
+    #-------------------- print()
+    print = function() {
+      cat("Call:\n",
+          format(.self$call),
+          "\n\nCoefficients:\n")
+
+      coef_table <- data.frame(t(.self$beta))
+      colnames(coef_table) <- names(.self$beta)
+      rownames(coef_table) <- ""
+
+      print.data.frame(coef_table)
+    },
+
+    #-------------------- plot()
+    plot = function(){
+      fig_1_data_frame <- data.frame(
+        x_axis = .self$fitted_val,
+        y_axis = .self$residual_val
+      )
+      fig_1 <- ggplot2::ggplot(data = fig_1_data_frame) +
+        ggplot2::geom_point(ggplot2::aes(x = x_axis, y = y_axis)) +
+        ggplot2::stat_summary(ggplot2::aes(x = x_axis, y = y_axis), fun = median, geom = "line") +
+        ggplot2::labs(
+          title = "Residuals vs Fitted",
+          x ="Fitted Values",
+          y = "Residuals"
+        )
+
+
+
+      fig_2_data_frame <- data.frame(
+        x_axis = .self$fitted_val,
+        y_axis = sqrt(
+          abs(
+            (.self$residual_val - mean(.self$residual_val)) / sd(.self$residual_val)
+          )
+        )
+      )
+      fig_2 <- ggplot2::ggplot(data = fig_2_data_frame) +
+        ggplot2::geom_point(ggplot2::aes(x = x_axis, y = y_axis)) +
+        ggplot2::stat_summary(ggplot2::aes(x = x_axis, y = y_axis), fun = mean, geom = "line") +
+        ggplot2::labs(
+          title = "Scale-Location",
+          x = "Fitted Values",
+          y = expression(sqrt(abs("Standardized Residuals")))
+        )
+
+      result <- list(
+        "fig1" <- fig_1,
+        "fig2" <- fig_2
+      )
+      return(result)
+    },
+
+    #-------------------- 3 small functions:)
+    resid = function(){
+      return(.self$residual_val)
+    },
+
+    pred = function(){
+      return(.self$fitted_val)
+    },
+
+    coef = function(){
+      return(.self$beta)
+    },
+
+    #-------------------- summary()
+    summary = function(){
+      result <- data.frame(
+        "Estimate" = .self$beta,
+        "Std_Error" = sqrt(.self$var_reg),
+        "t_value" = .self$t_values,
+        "p_value" = .self$p_values
+      )
+      result$" " <- ifelse(
+        result [[4]] >= 1,
+        " ",
+        ifelse(
+          result [[4]] > 0.1,
+          ".",
+          ifelse(
+            result[[4]] > 0.05,
+            "*",
+            ifelse(
+              result[[4]] > 0.001,
+              "**",
+              "***"
+            )
+          )
+        )
+      )
+
+      cat("Coefficients:\n")
+      print.data.frame(result)
+      cat("\n\nResidual standard error:", sqrt(.self$res_var), "on", .self$df, "degrees of freedom")
+    }
   )
 
-  result <- linreg_RC$new(
-    "call" = match.call(),
-    "beta" = beta_vector,
-    "fitted_val" = as.vector(fitted_val),
-    "residual_val" = as.vector(residual_val),
-    "df" = df,
-    "res_var" = res_var,
-    "var_reg" = var_reg,
-    "t_values" = t_values,
-    "p_values" = p_values
-  )
-  return(result)
-}
-
+)
