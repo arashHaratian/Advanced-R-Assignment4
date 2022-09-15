@@ -1,3 +1,20 @@
+#' linreg Class
+#'
+#' This class calculates all the interesting parameter for the linear regression and uses the following methods:
+#'
+#' @field beta Regression Coefficients
+#' @field fitted_val Fitted Values
+#' @field residual_val Residual Values
+#' @field df Degrees of Freedom
+#' @field res_var Residual Variance
+#' @field var_reg Variance of the Regression Coefficients
+#' @field t_values t-values of the coefficients
+#' @field p_values p-values of the coefficients
+#' @field call Function Call as a string
+#'
+#' @import methods
+#' @export linreg
+
 linreg <- setRefClass(
   "linreg",
   fields = list(

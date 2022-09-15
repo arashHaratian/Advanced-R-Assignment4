@@ -1,0 +1,48 @@
+---
+title: "lab4package"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{lab4package}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(lab4package)
+```
+
+This package, designed for the "Advanced Programming in R" LiU course, contains the `linreg` class with the following methods:
+
+- `print()`:  The `print()` method returns the coefficients and coefficient names from your linear model. 
+
+- `plot()`: The `plot()` method returns two graphs, the first one representing the residuals versus the fitted values of your model solution.
+
+- `resid()`: The `resid()` method returns the residuals' vector.    
+
+- `pred()`: The `pred()` method returns the predicted values' vector.      
+
+- `coef()`: The `coef()` method returns the coefficients.   
+
+- `summary()`: The `summary()` method prints out the coefficients with their standard error, t-value and p-value. Additionally, it also shows the estimate of $\hat{\sigma}$ and the degrees of freedom of the model.  
+
+To use the methods in the class we first have to create the object of that class by using `linreg$new()` and introducing a `formula` object and a `data.frame` object. Once this is done we can call the methods my writing the object's name followed by dollar sign and the name of the method.   
+For a better understanding, see the following example.   
+
+```{r}
+linreg_obj <- linreg$new(Petal.Length ~ Species, data = iris)
+
+linreg_obj$print()
+linreg_obj$plot()
+linreg_obj$pred()
+linreg_obj$resid()
+linreg_obj$coef()
+linreg_obj$summary()
+```
+
